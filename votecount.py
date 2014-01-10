@@ -192,10 +192,12 @@ if __name__ == '__main__':
     while url:
         url = count_votes(url, args.max_fuzz, state)
 
-    if not args.bbcode:
-        state.dump(console_templates)
-    else:
-        state.dump(bbcode_templates)
+    templates = console_templates
+
+    if args.bbcode:
+        templates = bbcode_templates
+
+    state.dump(templates)
 
     if log_messages:
         print
