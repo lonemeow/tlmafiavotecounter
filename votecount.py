@@ -101,7 +101,7 @@ class LogEntry:
         self.message = message
         self.url = url
 
-    def dump():
+    def dump(self):
         print '%s: %s (%s)' % (self.severity.upper(), self.message, self.url)
 
 
