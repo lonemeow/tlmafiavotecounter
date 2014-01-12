@@ -11,23 +11,23 @@ from urllib2 import urlopen
 from BeautifulSoup import BeautifulSoup, NavigableString
 
 console_templates = {
-        'vote'       : Template('$voter'),
-        'unvote'     : Template('-$voter-'),
-        'player'     : Template('$player ($count): $votes'),
-        'not_voting' : Template('Not voting ($count): $players')
+        'vote'        : Template('$voter'),
+        'unvote'      : Template('-$voter-'),
+        'player'      : Template('$player ($count): $votes'),
+        'not_voting'  : Template('Not voting ($count): $players'),
+        'log_message' : Template('$level: $message ($url)'),
         }
 
 bbcode_templates = {
-        'vote'       : Template('$voter'),
-        'unvote'     : Template('[s]$voter[/s]'),
-        'player'     : Template('[b]$player[/b] ($count): $votes'),
-        'not_voting' : Template('[b]Not voting[/b] ($count): $players')
+        'vote'        : Template('$voter'),
+        'unvote'      : Template('[s]$voter[/s]'),
+        'player'      : Template('[b]$player[/b] ($count): $votes'),
+        'not_voting'  : Template('[b]Not voting[/b] ($count): $players'),
+        'log_message' : Template('$level: $message ([url=$url]post[/url])'),
         }
 
 vote_pattern = re.compile('^## ?Vote[: ] *(.*)$', re.IGNORECASE)
 unvote_pattern = re.compile('^## ?Unvote.*$', re.IGNORECASE)
-
-debug = False
 
 log_messages = []
 
@@ -55,18 +55,18 @@ class GameState:
         self.votes_by_voter = defaultdict(lambda: None)
 
     def vote(self, voter, target, url):
-        log('debug', '%s vote %s' % (voter, target), url)
         # Voted without unvoting first
         if self.votes_by_voter[voter]:
-            log('warning', 'Changed vote without unvote by %s: %s -> %s' % (voter, self.votes_by_voter[voter], target), url)
+            log_message('warning', '%s changed vote without unvote' % (voter, self.votes_by_voter[voter], target), url)
             self.unvote(voter, None)
 
+        log_message('vote', '%s voted %s' % (voter, target), url)
         self.votes_by_target[target].append(self.Vote(voter))
         self.votes_by_voter[voter] = target
 
     def unvote(self, voter, url):
         target = self.votes_by_voter[voter]
-        log('debug', '%s unvote %s' % (voter, target), url)
+        log_message('vote', '%s unvoted %s' % (voter, target), url)
         if target:
             for vote in reversed(self.votes_by_target[target]):
                 if vote.voter == voter:
@@ -75,7 +75,7 @@ class GameState:
 
             self.votes_by_voter[voter] = None
         else:
-            log('warning', 'Unvote without vote by %s' % voter, url)
+            log_message('warning', '%s unvoted without vote' % voter, url)
 
     def dump(self, templates):
         for player, votes in self.votes_by_target.iteritems():
@@ -102,14 +102,11 @@ class LogEntry:
         self.url = url
 
     def dump(self):
-        print '%s: %s (%s)' % (self.severity.upper(), self.message, self.url)
+        return templates['log_message'].substitute(level=self.severity.upper(), message=self.message, url=self.url)
 
 
-def log(severity, message, url):
-    if severity == 'debug' and debug:
-        print '%s: %s (%s)' % (severity.upper(), message, url)
-    elif severity != 'debug':
-        log_messages.append(LogEntry(severity, message, url))
+def log_message(severity, message, url):
+    log_messages.append(LogEntry(severity, message, url))
 
 
 def count_votes(url, max_fuzz, state):
@@ -155,7 +152,7 @@ def count_votes(url, max_fuzz, state):
                         if target:
                             state.vote(post_user, target, post_url)
                         else:
-                            log('error', 'Invalid vote by %s: %s' % (post_user, vote_data), post_url)
+                            log_message('error', '%s voted invalid player %s' % (post_user, vote_data), post_url)
                     elif unvote_match:
                         state.unvote(post_user, post_url)
 
@@ -172,13 +169,10 @@ if __name__ == '__main__':
     argparser.add_argument('url', help='The URL to start from (if this points to a specific message, the message and any messages before it on the page are excluded)')
     argparser.add_argument('--players', help='comma separated list of players or @filename.txt')
     argparser.add_argument('--max-fuzz', type=float, default=0.7, help='max fuzz factor used in player name matching')
-    argparser.add_argument('--debug', action='store_true', help='enable debug messages')
     argparser.add_argument('--bbcode', action='store_true', help='output TL forum compatible BBCode')
     args = argparser.parse_args()
 
     players = []
-
-    debug = args.debug
 
     if args.players:
         if args.players[0] == '@':
@@ -203,4 +197,4 @@ if __name__ == '__main__':
         print
 
         for entry in log_messages:
-            entry.dump()
+            print entry.dump()
