@@ -30,6 +30,7 @@ vote_pattern = re.compile('^##? ?Vote[: ] *(.*)$', re.IGNORECASE)
 unvote_pattern = re.compile('^##? ?Unvote.*$', re.IGNORECASE)
 
 log_messages = []
+max_fuzz = 0.7
 
 class GameState:
     class Vote:
@@ -54,20 +55,30 @@ class GameState:
         self.votes_by_target = defaultdict(list)
         self.votes_by_voter = defaultdict(lambda: None)
 
-    def vote(self, voter, target, url):
+    def vote(self, voter, vote, url):
+        target = find_matching_player(vote, players)
+        if not target:
+            log_message('error', '%s voted invalid player %s' % (voter, vote), url)
+            return
+
         # Voted without unvoting first
         if self.votes_by_voter[voter]:
-            log_message('warning', '%s changed vote without unvote' % (voter, self.votes_by_voter[voter], target), url)
-            self.unvote(voter, None)
+            log_message('warning', '%s changed vote without unvote' % voter, url)
+            self.unvote(voter, url)
 
-        log_message('vote', '%s voted %s' % (voter, target), url)
+        if vote != target:
+            log_message('vote', '%s voted %s (%s)' % (voter, vote, target), url)
+        else:
+            log_message('vote', '%s voted %s' % (voter, target), url)
+
         self.votes_by_target[target].append(self.Vote(voter))
         self.votes_by_voter[voter] = target
 
     def unvote(self, voter, url):
         target = self.votes_by_voter[voter]
-        log_message('vote', '%s unvoted %s' % (voter, target), url)
         if target:
+            log_message('vote', '%s unvoted %s' % (voter, target), url)
+
             for vote in reversed(self.votes_by_target[target]):
                 if vote.voter == voter:
                     vote.unvoted = True
@@ -87,7 +98,7 @@ class GameState:
             print templates['not_voting'].substitute(count=len(not_voting), players=', '.join(not_voting))
 
 
-def find_matching_player(vote, players, max_fuzz):
+def find_matching_player(vote, players):
     matches = difflib.get_close_matches(vote, players, cutoff=max_fuzz)
 
     if len(matches) != 1:
@@ -109,7 +120,7 @@ def log_message(severity, message, url):
     log_messages.append(LogEntry(severity, message, url))
 
 
-def count_votes(url, max_fuzz, state):
+def count_votes(url, state):
     response = urlopen(url)
     url = response.geturl()
     fragment = urlsplit(url).fragment
@@ -147,12 +158,8 @@ def count_votes(url, max_fuzz, state):
                     vote_match = vote_pattern.match(text)
                     unvote_match = unvote_pattern.match(text)
                     if vote_match:
-                        vote_data = vote_match.group(1)
-                        target = find_matching_player(vote_data.strip(), state.players, max_fuzz)
-                        if target:
-                            state.vote(post_user, target, post_url)
-                        else:
-                            log_message('error', '%s voted invalid player %s' % (post_user, vote_data), post_url)
+                        target = vote_match.group(1)
+                        state.vote(post_user, target, post_url)
                     elif unvote_match:
                         state.unvote(post_user, post_url)
 
@@ -181,10 +188,12 @@ if __name__ == '__main__':
         else:
             players = args.players.split(',')
 
+    max_fuzz = args.max_fuzz
+
     url = args.url
     state = GameState(players)
     while url:
-        url = count_votes(url, args.max_fuzz, state)
+        url = count_votes(url, state)
 
     templates = console_templates
 
