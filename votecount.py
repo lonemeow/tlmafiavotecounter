@@ -26,8 +26,8 @@ bbcode_templates = {
         'log_message' : Template('$level: $message ([url=$url]post[/url])'),
         }
 
-vote_pattern = re.compile('^## ?Vote[: ] *(.*)$', re.IGNORECASE)
-unvote_pattern = re.compile('^## ?Unvote.*$', re.IGNORECASE)
+vote_pattern = re.compile('^##? ?Vote[: ] *(.*)$', re.IGNORECASE)
+unvote_pattern = re.compile('^##? ?Unvote.*$', re.IGNORECASE)
 
 log_messages = []
 
