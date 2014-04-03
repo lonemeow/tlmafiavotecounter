@@ -51,12 +51,12 @@ class GameState:
                 return templates['unvote'].substitute(voter=self.voter)
 
     def __init__(self, players):
-        self.players = list(players)
+        self.players = players
         self.votes_by_target = defaultdict(list)
         self.votes_by_voter = defaultdict(lambda: None)
 
     def vote(self, voter, vote, url):
-        target = find_matching_player(vote, players)
+        target = find_matching_player(vote, self.players)
         if not target:
             log_message('error', '%s voted invalid player %s' % (voter, vote), url)
             return
@@ -99,12 +99,18 @@ class GameState:
 
 
 def find_matching_player(vote, players):
-    matches = difflib.get_close_matches(vote, players, cutoff=max_fuzz)
+    players_all = players.keys()
+    matches = difflib.get_close_matches(vote, players_all, cutoff=max_fuzz)
 
     if len(matches) != 1:
         return None
     else:
-        return matches[0]
+        match = matches[0]
+
+        if players[match] == None:
+            return match
+        else:
+            return players[match]
 
 class LogEntry:
     def __init__(self, severity, message, url):
@@ -184,9 +190,20 @@ if __name__ == '__main__':
     if args.players:
         if args.players[0] == '@':
             with open(args.players[1:]) as f:
-                players = [p.strip() for p in f]
+                players = dict()
+
+                for line in f:
+                    aliases = [a.strip() for a in line.split(',')]
+
+                    name = aliases[0]
+                    aliases = aliases[1:]
+
+                    players[name] = None
+
+                    for a in aliases:
+                        players[a] = name
         else:
-            players = args.players.split(',')
+            players = dict([(n, None) for n in args.players.split(',')])
 
     max_fuzz = args.max_fuzz
 
