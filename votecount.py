@@ -164,7 +164,7 @@ def count_votes(url, state):
                     vote_match = vote_pattern.match(text)
                     unvote_match = unvote_pattern.match(text)
                     if vote_match:
-                        target = vote_match.group(1)
+                        target = vote_match.group(1).strip()
                         state.vote(post_user, target, post_url)
                     elif unvote_match:
                         state.unvote(post_user, post_url)
