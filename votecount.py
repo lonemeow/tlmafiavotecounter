@@ -92,25 +92,25 @@ class GameState:
         for player, votes in self.votes_by_target.iteritems():
             print templates['player'].substitute(player=player, count=sum(map(lambda x: x.count(), votes)), votes=', '.join(map(lambda x: x.dump(templates), votes)))
 
-        not_voting = [v for v in self.players if not self.votes_by_voter[v]]
+        not_voting = [v for v in self.players.itervalues() if not self.votes_by_voter[v]]
         if not_voting:
             print
             print templates['not_voting'].substitute(count=len(not_voting), players=', '.join(not_voting))
 
 
 def find_matching_player(vote, players):
-    players_all = players.keys()
-    matches = difflib.get_close_matches(vote, players_all, cutoff=max_fuzz)
+    matches = difflib.get_close_matches(vote.lower(), players.keys(), cutoff=max_fuzz)
 
-    if len(matches) != 1:
+    if not matches:
         return None
-    else:
-        match = matches[0]
 
-        if players[match] == None:
-            return match
-        else:
-            return players[match]
+    player = players[matches[0]]
+
+    for match in matches[1:]:
+        if player != players[match]:
+            return None
+
+    return player
 
 class LogEntry:
     def __init__(self, severity, message, url):
@@ -149,7 +149,7 @@ def count_votes(url, state):
             post_user = user_link['data-user']
 
             # Ignore posts by non-players
-            if post_user not in state.players:
+            if post_user not in state.players.values():
                 continue
 
             for element in post:
@@ -198,12 +198,12 @@ if __name__ == '__main__':
                     name = aliases[0]
                     aliases = aliases[1:]
 
-                    players[name] = None
+                    players[name.lower()] = name
 
                     for a in aliases:
-                        players[a] = name
+                        players[a.lower()] = name
         else:
-            players = dict([(n, None) for n in args.players.split(',')])
+            players = dict([(n.lower(), n) for n in args.players.split(',')])
 
     max_fuzz = args.max_fuzz
 
