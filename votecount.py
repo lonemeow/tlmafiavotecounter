@@ -92,7 +92,7 @@ class GameState:
         for player, votes in self.votes_by_target.iteritems():
             print templates['player'].substitute(player=player, count=sum(map(lambda x: x.count(), votes)), votes=', '.join(map(lambda x: x.dump(templates), votes)))
 
-        not_voting = [v for v in self.players.itervalues() if not self.votes_by_voter[v]]
+        not_voting = [v for k, v in self.players.iteritems() if not self.votes_by_voter[v] and k == v.lower()]
         if not_voting:
             print
             print templates['not_voting'].substitute(count=len(not_voting), players=', '.join(not_voting))
