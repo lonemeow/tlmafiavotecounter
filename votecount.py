@@ -30,7 +30,7 @@ vote_pattern = re.compile('^##? ?Vote[: ] *(.*)$', re.IGNORECASE)
 unvote_pattern = re.compile('^##? ?Unvote.*$', re.IGNORECASE)
 
 log_messages = []
-max_fuzz = 0.7
+max_fuzz = 0.8
 
 class GameState:
     class Vote:
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Count the votes in a Team Liquid forum mafia game.')
     argparser.add_argument('url', help='The URL to start from (if this points to a specific message, the message and any messages before it on the page are excluded)')
     argparser.add_argument('--players', help='comma separated list of players or @filename.txt')
-    argparser.add_argument('--max-fuzz', type=float, default=0.7, help='max fuzz factor used in player name matching')
+    argparser.add_argument('--max-fuzz', type=float, default=max_fuzz, help='max fuzz factor used in player name matching')
     argparser.add_argument('--bbcode', action='store_true', help='output TL forum compatible BBCode')
     args = argparser.parse_args()
 
