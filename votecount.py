@@ -31,6 +31,7 @@ unvote_pattern = re.compile('^##? ?Unvote.*$', re.IGNORECASE)
 
 log_messages = []
 max_fuzz = 0.8
+allow_self_vote = True
 
 class GameState:
     class Vote:
@@ -57,6 +58,10 @@ class GameState:
 
     def vote(self, voter, vote, url):
         target = find_matching_player(vote, self.players)
+
+        if not allow_self_vote and voter == target:
+            target = None
+
         if not target:
             log_message('error', '%s voted invalid player %s' % (voter, vote), url)
             return
@@ -183,6 +188,7 @@ if __name__ == '__main__':
     argparser.add_argument('--players', help='comma separated list of players or @filename.txt')
     argparser.add_argument('--max-fuzz', type=float, default=max_fuzz, help='max fuzz factor used in player name matching')
     argparser.add_argument('--bbcode', action='store_true', help='output TL forum compatible BBCode')
+    argparser.add_argument('--no-self-vote', action='store_true', help='disallow self voting')
     args = argparser.parse_args()
 
     players = []
@@ -206,6 +212,9 @@ if __name__ == '__main__':
             players = dict([(n.lower(), n) for n in args.players.split(',')])
 
     max_fuzz = args.max_fuzz
+
+    if args.no_self_vote:
+        allow_self_vote = False
 
     url = args.url
     state = GameState(players)
