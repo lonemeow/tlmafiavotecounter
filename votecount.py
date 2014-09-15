@@ -57,6 +57,10 @@ class GameState:
         self.votes_by_voter = defaultdict(lambda: None)
 
     def vote(self, voter, vote, url):
+        if voter.lower() not in self.players.keys():
+            log_message('error', '%s is not playing' % voter, url)
+            return
+
         target = find_matching_player(vote, self.players)
 
         if not allow_self_vote and voter == target:
@@ -80,6 +84,10 @@ class GameState:
         self.votes_by_voter[voter] = target
 
     def unvote(self, voter, url):
+        if voter.lower() not in self.players.keys():
+            log_message('error', '%s is not playing' % voter, url)
+            return
+
         target = self.votes_by_voter[voter]
         if target:
             log_message('vote', '%s unvoted %s' % (voter, target), url)
@@ -152,10 +160,6 @@ def count_votes(url, state):
         else:
             user_link = post_base.find('a', attrs={ 'data-user' : True })
             post_user = user_link['data-user']
-
-            # Ignore posts by non-players
-            if post_user not in state.players.values():
-                continue
 
             for element in post:
                 texts = []
